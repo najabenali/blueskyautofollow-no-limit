@@ -40,7 +40,7 @@ function App() {
       await new Promise((resolve) => {
         setTimeout(() => {
           resolve();
-        }, 100);
+        }, 10);
       });
     }
 
