@@ -1,13 +1,13 @@
-.app-container {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+.app {
   font-family: Arial, sans-serif;
+  padding: 20px;
+  max-width: 600px;
+  margin: auto;
 }
 
-.text-3xl {
+.title {
   text-align: center;
-  font-size: 2rem;
+  font-size: 24px;
   margin-bottom: 20px;
 }
 
@@ -16,63 +16,72 @@
   padding: 20px;
   border-radius: 10px;
   margin-bottom: 20px;
-  border: 1px solid #ddd;
-  max-width: 600px;
-  margin: 0 auto;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .form-group {
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .form-group label {
   display: block;
   margin-bottom: 5px;
-  font-weight: bold;
 }
 
-.actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  justify-content: flex-end;
+.input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
 }
 
-.followings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  max-width: 600px;
-  margin: 20px auto;
+.button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
-.following-item {
+.button.blue {
+  background-color: #007bff;
+  color: white;
+}
+
+.button.red {
+  background-color: #dc3545;
+  color: white;
+}
+
+.button.gray {
+  background-color: #f0f0f0;
+  color: black;
+}
+
+.list {
+  margin-top: 20px;
+}
+
+.list-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #fff;
+  margin-bottom: 10px;
   padding: 10px;
-  border-radius: 5px;
   border: 1px solid #ddd;
+  border-radius: 5px;
 }
 
-.following-item img {
-  width: 50px;
-  height: 50px;
+.avatar {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
+  margin-right: 10px;
 }
 
-.following-item div {
+.info {
   flex: 1;
 }
 
-.following-item h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: bold;
-}
-
-.following-item p {
-  margin: 0;
-  color: #555;
+.actions {
+  margin-top: 20px;
+  text-align: center;
 }
