@@ -119,10 +119,10 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="header">
+      <header className="header">
         <h1>BlueWave 🦋</h1>
-        <p className="subtitle">Batch unfollow users easily</p>
-      </div>
+        <p className="subtitle">Easily unfollow users in bulk</p>
+      </header>
 
       <form
         onSubmit={e => {
@@ -132,8 +132,9 @@ function App() {
         className="form-container"
       >
         <div className="input-group">
-          <label>Username</label>
+          <label htmlFor="username">Username</label>
           <input
+            id="username"
             type="text"
             value={username}
             onChange={e => setUsername(e.target.value)}
@@ -141,9 +142,11 @@ function App() {
             required
           />
         </div>
+
         <div className="input-group">
-          <label>App Password</label>
+          <label htmlFor="password">App Password</label>
           <input
+            id="password"
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
@@ -151,6 +154,7 @@ function App() {
             required
           />
         </div>
+
         <button type="submit" className="primary-btn" disabled={isLoading}>
           {isLoading ? 'Loading...' : 'Fetch Followings'}
         </button>
@@ -198,6 +202,7 @@ function App() {
                   type="checkbox"
                   checked={actor.toUnfollow}
                   onChange={e => toggleUnfollow(e.target.checked, actor.did)}
+                  className="unfollow-checkbox"
                 />
               </div>
             ))}
