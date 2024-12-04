@@ -10,8 +10,8 @@ function App() {
   const [followings, setFollowings] = useState([]);
   const [fliteKeyword, setFliteKeyword] = useState('');
   const flitedFollowings = useMemo(() => {
-    return followings.filter(actor => 
-      `${actor.displayName || ''} : ${actor.description || ''}`.includes(fliteKeyword)
+    return followings.filter(actor =>
+      `${actor.displayName || ''} : ${actor.description || ''}`.toLowerCase().includes(fliteKeyword.toLowerCase())
     );
   }, [followings, fliteKeyword]);
 
@@ -28,7 +28,7 @@ function App() {
       const actor = toUnfollows[i];
       await agent.unfollow(actor.did);
       toast.success(`Unfollowed: ${actor.displayName || actor.did} (${i + 1}/${len})`);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Pause for rate-limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   };
 
@@ -46,7 +46,8 @@ function App() {
     }
   };
 
-  const handleFetchFollowings = async () => {
+  const handleFetchFollowings = async e => {
+    e.preventDefault();
     const agent = await getAgent();
     let cursor = null;
     let i = 0;
@@ -67,64 +68,70 @@ function App() {
     if (did === 'all') {
       setFollowings(followings.map(actor => ({ ...actor, toUnfollow: status })));
     } else {
-      setFollowings(followings.map(actor => 
+      setFollowings(followings.map(actor =>
         actor.did === did ? { ...actor, toUnfollow: status } : actor
       ));
     }
   };
 
   return (
-    <div>
-      <h1 className="text-center">Bluesky Unfollow Bot 🦋</h1>
-      <form
-        onSubmit={e => {
-          e.preventDefault();
-          handleFetchFollowings();
-        }}
-        className="form-container"
-      >
-        <input
-          type="text"
-          placeholder="Your username (user.bsky.social)"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="App Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        <button type="submit">Fetch Followings</button>
+    <div className="app-container">
+      <h1 className="title">Bluesky Unfollow Bot 🦋</h1>
+      <form onSubmit={handleFetchFollowings} className="form">
+        <div className="form-group">
+          <label>Username:</label>
+          <input
+            type="text"
+            placeholder="yourusername.bsky.social"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label>App Password:</label>
+          <input
+            type="password"
+            placeholder="App-specific password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        <button type="submit" className="blue">Fetch Followings</button>
       </form>
-      <div>
+
+      <div className="controls">
         <input
           type="text"
           placeholder="Filter by keyword"
           value={fliteKeyword}
           onChange={e => setFliteKeyword(e.target.value)}
         />
-        <button onClick={() => toggleToUnfollow(true, 'all')}>Select All</button>
-        <button onClick={() => toggleToUnfollow(false, 'all')}>Deselect All</button>
-        <button onClick={bulkUnfollow} disabled={toUnfollowCount < 1}>
+        <button className="gray" onClick={() => toggleToUnfollow(true, 'all')}>Select All</button>
+        <button className="gray" onClick={() => toggleToUnfollow(false, 'all')}>Deselect All</button>
+        <button className="blue" onClick={bulkUnfollow} disabled={toUnfollowCount < 1}>
           Unfollow ({toUnfollowCount})
         </button>
       </div>
-      <ul>
+
+      <div className="followings-list">
         {flitedFollowings.map(actor => (
-          <li key={actor.did}>
+          <div className="following-item" key={actor.did}>
             <img src={actor.avatar || default_avatar} alt={actor.displayName} />
-            <span>{actor.displayName || actor.handle}</span>
+            <div>
+              <h3>{actor.displayName || actor.handle}</h3>
+              <p>{actor.description}</p>
+            </div>
             <input
               type="checkbox"
               checked={actor.toUnfollow || false}
               onChange={e => toggleToUnfollow(e.target.checked, actor.did)}
             />
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
+
       <Toaster position="bottom-center" />
     </div>
   );
