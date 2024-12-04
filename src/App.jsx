@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import './App.scss'
 import { BskyAgent } from '@atproto/api'
 import toast, { Toaster } from 'react-hot-toast'
@@ -7,48 +7,13 @@ function App() {
   let skyAgent = false
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-
-  const startUsername = new URLSearchParams(window.location.search).get('start') || ''
-  const [startFollowerAccount, setStartFollowerAccount] = useState(startUsername)
+  const [startAccount, setStartAccount] = useState('')
   const [followers, setFollowers] = useState([])
   const [isLoading, setIsLoading] = useState(false)
-  const [followAuthor, setFollowAuthor] = useState(true)
-
-  const [filterKeyword, setFilterKeyword] = useState('')
-  const filteredFollowers = useMemo(() => {
-    return followers.filter(actor => 
-      `${actor.displayName || ''} : ${actor.description || ''}`.includes(filterKeyword)
-    )
-  }, [followers, filterKeyword])
-
-  const defaultAvatar = 'https://cdn.bsky.app/img/avatar/plain/default-avatar.jpg'
-  const authorDid = 'did:plc:vlt4uq7tqbbinku5q7u4u43r'
-
-  const toFollowCount = useMemo(() => {
-    return followers.filter(actor => actor.toFollow).length
-  }, [followers])
-
-  const bulkFollow = async () => {
-    const agent = await getAgent()
-    const toFollows = followers.filter(actor => actor.toFollow)
-    for (let i = 0, len = toFollows.length; i < len; i++) {
-      const actor = toFollows[i]
-      const { uri } = await agent.follow(actor.did)
-      console.log(uri)
-      toast.success(`Followed: ${actor.displayName || actor.did} ${i + 1}/${len}`)
-      await new Promise(resolve => setTimeout(resolve, 7))
-    }
-
-    if (followAuthor) {
-      await agent.follow(authorDid)
-      toast.success('Followed: BlueWave creator')
-    }
-  }
 
   const getAgent = async () => {
     if (skyAgent) return skyAgent
     const agent = new BskyAgent({ service: 'https://bsky.social' })
-
     try {
       await agent.login({ identifier: username, password })
       skyAgent = agent
@@ -56,121 +21,85 @@ function App() {
       return agent
     } catch (error) {
       console.error(error)
-      toast.error('Login failed. Use your app password, not account password.')
-      setTimeout(() => {
-        if (window.confirm('Open Bluesky App Password page?')) {
-          window.open('https://bsky.app/settings/app-passwords', '_blank')
-        }
-      }, 1000)
+      toast.error('Login failed. Please use an app password.')
+      return null
     }
   }
 
-  const handleFormSubmit = async e => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-
     const agent = await getAgent()
-    const max = 5
-    let cursor = null
-    let fetchedFollowers = []
-
-    for (let i = 0; i < max; i++) {
-      const { data } = await agent.getFollowers({ actor: startFollowerAccount, limit: 100, cursor })
-      console.log(data, `${i + 1}/${max}`)
-      
-      if (!fetchedFollowers.length && data.subject) fetchedFollowers.push(data.subject)
-      if (data.follows) {
-        fetchedFollowers = [...fetchedFollowers, ...data.follows]
-        cursor = data.cursor || null
-      }
-      if (!cursor) break
+    if (!agent) {
+      setIsLoading(false)
+      return
     }
 
-    fetchedFollowers = fetchedFollowers.filter(
-      (actor, index, self) => self.findIndex(t => t.did === actor.did) === index
-    )
+    let cursor = null
+    let allFollowers = []
+    const maxFetches = Math.ceil(1500 / 100) // Each API call fetches 100 items max
 
-    setFollowers(fetchedFollowers)
-    setIsLoading(false)
-  }
-
-  const toggleToFollow = (status, did) => {
-    if (did === 'all') {
-      const updatedFollowers = filteredFollowers.map(actor => ({ ...actor, toFollow: status }))
-      const mergedFollowers = [...updatedFollowers, ...followers].filter(
-        (actor, index, self) => self.findIndex(t => t.did === actor.did) === index
-      )
-      setFollowers(mergedFollowers)
-    } else {
-      const updatedFollowers = [...followers]
-      const index = updatedFollowers.findIndex(actor => actor.did === did)
-      if (index !== -1) {
-        updatedFollowers[index].toFollow = status
-        setFollowers(updatedFollowers)
+    try {
+      for (let i = 0; i < maxFetches; i++) {
+        const { data } = await agent.getFollowers({ actor: startAccount, limit: 100, cursor })
+        if (data.followers) {
+          allFollowers = [...allFollowers, ...data.followers]
+          cursor = data.cursor
+          if (!cursor || allFollowers.length >= 1500) break
+        }
       }
+
+      const uniqueFollowers = allFollowers.filter(
+        (item, index, self) => self.findIndex((f) => f.did === item.did) === index
+      )
+
+      setFollowers(uniqueFollowers.slice(0, 1500))
+      toast.success(`Fetched ${uniqueFollowers.length} followers!`)
+    } catch (error) {
+      console.error('Error fetching followers:', error)
+      toast.error('Failed to fetch followers.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <>
-      <div className="text-3xl mt-10 text-center">
-        BlueWave 🦋
-        <div className="text-sm text-gray-300">Follow multiple users at once</div>
-      </div>
-      <form onSubmit={handleFormSubmit} className="form-container">
-        <div className="input-group">
-          <label>Username</label>
-          <input
-            type="text"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            placeholder="user.bsky.social"
-            required
-          />
-        </div>
-        <div className="input-group">
-          <label>App Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="abcd-efgh-hijl-mnop"
-            required
-          />
-        </div>
-        <div className="input-group">
-          <label>Starting Username</label>
-          <input
-            type="text"
-            value={startFollowerAccount}
-            onChange={e => setStartFollowerAccount(e.target.value)}
-            placeholder="user.bsky.social"
-            required
-          />
-        </div>
+    <div>
+      <form onSubmit={handleFormSubmit}>
+        <input
+          type="text"
+          placeholder="Bluesky Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="App Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Target Username"
+          value={startAccount}
+          onChange={(e) => setStartAccount(e.target.value)}
+          required
+        />
         <button type="submit" disabled={isLoading}>
-          Fetch Followers
+          {isLoading ? 'Fetching...' : 'Fetch Followers'}
         </button>
       </form>
-      <div className="followers-list">
-        {filteredFollowers.map(actor => (
-          <div key={actor.did} className="actor-item">
-            <img src={actor.avatar || defaultAvatar} alt={actor.displayName} />
-            <div>
-              <a href={`https://bsky.app/profile/${actor.handle}`} target="_blank" rel="noreferrer">
-                {actor.displayName}
-              </a>
-            </div>
-            <input
-              type="checkbox"
-              checked={actor.toFollow || false}
-              onChange={e => toggleToFollow(e.target.checked, actor.did)}
-            />
+      <div>
+        {followers.map((follower) => (
+          <div key={follower.did}>
+            <p>{follower.displayName || follower.handle}</p>
           </div>
         ))}
       </div>
-      <Toaster position="bottom-center" />
-    </>
+      <Toaster />
+    </div>
   )
 }
 
