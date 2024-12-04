@@ -70,7 +70,7 @@ function App() {
     setIsLoading(true)
 
     const agent = await getAgent()
-    const max = 1000
+    const max = 5
     let cursor = null
     let fetchedFollowers = []
 
