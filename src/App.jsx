@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import './App.scss';
 import { BskyAgent } from '@atproto/api';
 import toast, { Toaster } from 'react-hot-toast';
@@ -10,27 +10,12 @@ function App() {
   const [followings, setFollowings] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const default_avatar = 'https://cdn.bsky.app/img/avatar/plain/did:plc:z72i7hdynmk6r22z27h6tvur/bafkreihagr2cmvl2jt4mgx3sppwe2it3fwolkrbtjrhcnwjk4jdijhsoze@jpeg';
-
-  const unfollowCount = useMemo(() => {
-    return followings.filter(actor => actor.toUnfollow).length;
-  }, [followings]);
-
-  const bulkUnfollow = async () => {
-    const agent = await getAgent();
-    const toUnfollows = followings.filter(actor => actor.toUnfollow);
-
-    for (let i = 0; i < toUnfollows.length; i++) {
-      const actor = toUnfollows[i];
-      await agent.unfollow(actor.did);
-      toast.success(`Unfollowed: ${actor.displayName || actor.did} (${i + 1}/${toUnfollows.length})`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    setFollowings(followings.filter(actor => !actor.toUnfollow));
-  };
+  const default_avatar =
+    'https://cdn.bsky.app/img/avatar/plain/did:plc:z72i7hdynmk6r22z27h6tvur/bafkreihagr2cmvl2jt4mgx3sppwe2it3fwolkrbtjrhcnwjk4jdijhsoze@jpeg';
 
   const getAgent = async () => {
     if (skyAgent) return skyAgent;
+
     const agent = new BskyAgent({ service: 'https://bsky.social' });
     try {
       await agent.login({ identifier: username, password });
@@ -43,32 +28,71 @@ function App() {
     }
   };
 
-  const handleFetchFollowings = async e => {
+  const handleFetchFollowings = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     const agent = await getAgent();
     let cursor = null;
-    let i = 0;
     const fetchedFollowings = [];
 
-    do {
-      i++;
-      const { data } = await agent.getFollows({ actor: username, limit: 100, cursor });
-      if (data.follows) {
-        fetchedFollowings.push(...data.follows);
-        cursor = data.cursor;
-      }
-    } while (cursor && i < 10);
+    try {
+      do {
+        const { data } = await agent.getFollows({ actor: username, limit: 100, cursor });
+        if (data.follows) {
+          fetchedFollowings.push(...data.follows);
+          cursor = data.cursor;
+        }
+      } while (cursor);
 
-    setFollowings(fetchedFollowings);
-    setIsLoading(false);
-    toast.success(`Loaded ${fetchedFollowings.length} followings!`);
+      setFollowings(
+        fetchedFollowings.map((actor) => ({
+          ...actor,
+          toUnfollow: false, // Initialize `toUnfollow` for each actor
+        }))
+      );
+      toast.success(`Loaded ${fetchedFollowings.length} followings!`);
+    } catch (error) {
+      toast.error('Failed to fetch followings.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const toggleToUnfollow = (status, did) => {
-    setFollowings(followings.map(actor =>
-      actor.did === did ? { ...actor, toUnfollow: status } : actor
-    ));
+  const handleUnfollow = async () => {
+    const agent = await getAgent();
+    const toUnfollows = followings.filter((actor) => actor.toUnfollow);
+
+    for (let i = 0; i < toUnfollows.length; i++) {
+      const actor = toUnfollows[i];
+      try {
+        await agent.unfollow(actor.did);
+        toast.success(`Unfollowed: ${actor.displayName || actor.did}`);
+      } catch (error) {
+        toast.error(`Failed to unfollow: ${actor.displayName || actor.did}`);
+      }
+    }
+
+    // Remove unfollowed users from the state
+    setFollowings((prevFollowings) =>
+      prevFollowings.filter((actor) => !actor.toUnfollow)
+    );
+  };
+
+  const toggleSelectAll = (status) => {
+    setFollowings((prevFollowings) =>
+      prevFollowings.map((actor) => ({
+        ...actor,
+        toUnfollow: status,
+      }))
+    );
+  };
+
+  const toggleUnfollow = (status, did) => {
+    setFollowings((prevFollowings) =>
+      prevFollowings.map((actor) =>
+        actor.did === did ? { ...actor, toUnfollow: status } : actor
+      )
+    );
   };
 
   return (
@@ -81,7 +105,7 @@ function App() {
             type="text"
             placeholder="yourusername.bsky.social"
             value={username}
-            onChange={e => setUsername(e.target.value)}
+            onChange={(e) => setUsername(e.target.value)}
             required
           />
         </div>
@@ -91,7 +115,7 @@ function App() {
             type="password"
             placeholder="App-specific password"
             value={password}
-            onChange={e => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
@@ -103,23 +127,34 @@ function App() {
       {followings.length > 0 && (
         <div className="followings-list">
           <div className="actions">
-            <button className="gray" onClick={() => toggleToUnfollow(true, 'all')}>Select All</button>
-            <button className="gray" onClick={() => toggleToUnfollow(false, 'all')}>Deselect All</button>
-            <button className="blue" onClick={bulkUnfollow} disabled={unfollowCount < 1}>
-              Unfollow ({unfollowCount})
+            <button className="gray" onClick={() => toggleSelectAll(true)}>
+              Select All
+            </button>
+            <button className="gray" onClick={() => toggleSelectAll(false)}>
+              Deselect All
+            </button>
+            <button
+              className="blue"
+              onClick={handleUnfollow}
+              disabled={!followings.some((actor) => actor.toUnfollow)}
+            >
+              Unfollow Selected
             </button>
           </div>
-          {followings.map(actor => (
+          {followings.map((actor) => (
             <div key={actor.did} className="following-item">
-              <img src={actor.avatar || default_avatar} alt={actor.displayName} />
+              <img
+                src={actor.avatar || default_avatar}
+                alt={actor.displayName || actor.handle}
+              />
               <div>
                 <h3>{actor.displayName || actor.handle}</h3>
                 <p>{actor.description}</p>
               </div>
               <input
                 type="checkbox"
-                checked={actor.toUnfollow || false}
-                onChange={e => toggleToUnfollow(e.target.checked, actor.did)}
+                checked={actor.toUnfollow}
+                onChange={(e) => toggleUnfollow(e.target.checked, actor.did)}
               />
             </div>
           ))}
