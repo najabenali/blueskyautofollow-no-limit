@@ -1,87 +1,56 @@
 .app {
   font-family: Arial, sans-serif;
-  padding: 20px;
   max-width: 600px;
   margin: auto;
+  padding: 20px;
 }
 
-.title {
-  text-align: center;
-  font-size: 24px;
+.header {
   margin-bottom: 20px;
 }
 
 .form {
-  background: #f9f9f9;
-  padding: 20px;
-  border-radius: 10px;
   margin-bottom: 20px;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .form-group {
   margin-bottom: 15px;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-}
-
-.input {
-  width: 100%;
-  padding: 10px;
-  border: 2px solid #ddd;
-  border-radius: 5px;
-}
-
 .button {
-  padding: 10px 15px;
-  border: none;
+  padding: 10px;
+  border: 1px solid black;
   border-radius: 5px;
   cursor: pointer;
 }
 
 .button.blue {
-  background-color: #007bff;
+  background-color: #73acfb;
   color: white;
 }
 
-.button.red {
-  background-color: #dc3545;
-  color: white;
+.button.blue:hover {
+  background-color: #5f8be3;
 }
 
 .button.gray {
-  background-color: #f0f0f0;
-  color: black;
+  background-color: #dedfe0;
 }
 
-.list {
-  margin-top: 20px;
+.followings-list ul {
+  list-style: none;
+  padding: 0;
 }
 
-.list-item {
+.following-item {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
 }
 
-.avatar {
+.following-item img.avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   margin-right: 10px;
-}
-
-.info {
-  flex: 1;
-}
-
-.actions {
-  margin-top: 20px;
-  text-align: center;
 }
