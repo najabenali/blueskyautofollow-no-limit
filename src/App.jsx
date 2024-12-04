@@ -7,41 +7,16 @@ function App() {
   let skyAgent = false;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-
-  const [startFollowingAccount, setStartFollowingAccount] = useState('');
   const [followings, setFollowings] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isUnfollowMode, setIsUnfollowMode] = useState(false);
 
   const default_avatar = 'https://cdn.bsky.app/img/avatar/plain/did:plc:z72i7hdynmk6r22z27h6tvur/bafkreihagr2cmvl2jt4mgx3sppwe2it3fwolkrbtjrhcnwjk4jdijhsoze@jpeg';
-
-  const toFollowCount = useMemo(() => {
-    return followings.filter(actor => actor.toFollow).length;
-  }, [followings]);
 
   const toUnfollowCount = useMemo(() => {
     return followings.filter(actor => actor.toUnfollow).length;
   }, [followings]);
 
   const maxUnfollowsPerDay = 500;
-
-  const bulkFollow = async () => {
-    const agent = await getAgent();
-    const toFollows = followings.filter(actor => actor.toFollow);
-
-    for (let i = 0; i < toFollows.length; i++) {
-      const actor = toFollows[i];
-      try {
-        const { uri } = await agent.follow(actor.did);
-        console.log(uri);
-        toast.success(`Followed: ${actor.displayName || actor.did} (${i + 1}/${toFollows.length})`);
-      } catch (error) {
-        console.error(`Failed to follow ${actor.displayName || actor.did}:`, error.message);
-        toast.error(`Failed to follow ${actor.displayName || actor.did}: ${error.message}`);
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
-    }
-  };
 
   const bulkUnfollow = async () => {
     const agent = await getAgent();
@@ -70,7 +45,7 @@ function App() {
 
     try {
       await agent.login({ identifier: username, password });
-      toast.success('Connected, wait a moment...');
+      toast.success('Connected, fetching followings...');
       skyAgent = agent;
       return agent;
     } catch (error) {
@@ -79,7 +54,7 @@ function App() {
     }
   };
 
-  const handleFetchFollowings = async () => {
+  const fetchFollowings = async () => {
     const agent = await getAgent();
     if (!agent) return;
 
@@ -93,13 +68,13 @@ function App() {
     try {
       do {
         attempt++;
-        const { data } = await agent.getFollows({ actor: startFollowingAccount, limit: 100, cursor });
+        const { data } = await agent.getFollows({ actor: username, limit: 100, cursor });
         followed = [...followed, ...(data.follows || [])];
         cursor = data.cursor || null;
       } while (cursor && attempt < maxFetchAttempts);
 
       followed = followed.filter((actor, index, self) => self.findIndex(t => t.did === actor.did) === index);
-      setFollowings(followed.map(actor => ({ ...actor, toFollow: false, toUnfollow: false })));
+      setFollowings(followed.map(actor => ({ ...actor, toUnfollow: false, followUri: actor.viewer.followUri })));
       toast.success('Fetched followings successfully.');
     } catch (error) {
       console.error('Failed to fetch followings:', error.message);
@@ -107,12 +82,6 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const toggleToFollow = (status, did) => {
-    setFollowings(prev =>
-      prev.map(actor => (actor.did === did || did === 'all' ? { ...actor, toFollow: status } : actor))
-    );
   };
 
   const toggleToUnfollow = (status, did) => {
@@ -123,37 +92,75 @@ function App() {
 
   return (
     <>
-      <div className="text-3xl mt-10 text-center">VISIONARY MANAGEMENT AUTOUNFOLLOW BOT 🦋
+      <div className="text-3xl mt-10 text-center">BlueWave 🦋
         <div className="text-sm text-gray-300">Unfollow multiple users at once</div>
       </div>
       <form className="flex flex-col p-10 max-w-[600px] mt-10 m-auto rounded shadow-xl bg-blue-50">
         <div className="flex flex-row justify-between mb-5">
           <label>Username</label>
-          <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="user.bsky.social" />
+          <input
+            type="text"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            placeholder="user.bsky.social"
+          />
         </div>
         <div className="flex flex-row justify-between mb-5">
           <label>App Password</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="abcd-efgh-hijk-lmno" />
-        </div>
-        <div className="flex flex-row justify-between mb-5">
-          <label>Target Username</label>
-          <input type="text" value={startFollowingAccount} onChange={e => setStartFollowingAccount(e.target.value)} placeholder="user.bsky.social" />
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="abcd-efgh-hijk-lmno"
+          />
         </div>
         <div className="flex justify-between">
-          <button type="button" onClick={handleFetchFollowings} disabled={isLoading}>
-            {isUnfollowMode ? 'Fetch Followed Users' : 'Fetch Followings'}
+          <button type="button" onClick={fetchFollowings} disabled={isLoading}>
+            Fetch Followings
           </button>
-          <button type="button" onClick={isUnfollowMode ? bulkUnfollow : bulkFollow} disabled={isLoading}>
-            {isUnfollowMode ? `Unfollow (${toUnfollowCount})` : `Follow (${toFollowCount})`}
+          <button type="button" onClick={bulkUnfollow} disabled={isLoading || toUnfollowCount === 0}>
+            Unfollow ({toUnfollowCount})
           </button>
-        </div>
-        <div className="mt-5">
-          <label>
-            <input type="checkbox" checked={isUnfollowMode} onChange={e => setIsUnfollowMode(e.target.checked)} />
-            Enable Unfollow Mode
-          </label>
         </div>
       </form>
+      <div className="mt-5 max-w-[600px] m-auto">
+        {followings && followings.length > 0 && (
+          <>
+            <div className="flex justify-between items-center mb-3">
+              <button onClick={() => toggleToUnfollow(true, 'all')} className="bg-blue-500 text-white p-2 rounded">
+                Select All
+              </button>
+              <button onClick={() => toggleToUnfollow(false, 'all')} className="bg-gray-500 text-white p-2 rounded">
+                Deselect All
+              </button>
+            </div>
+            <div>
+              {followings.map(actor => (
+                <div
+                  key={actor.did}
+                  className="flex items-center justify-between p-2 border rounded mb-2"
+                >
+                  <img
+                    src={actor.avatar || default_avatar}
+                    alt={actor.displayName || actor.did}
+                    className="w-12 h-12 rounded-full"
+                    onError={e => (e.target.src = default_avatar)}
+                  />
+                  <div className="ml-4 flex-1">
+                    <div className="font-bold">{actor.displayName || actor.did}</div>
+                    <div className="text-sm text-gray-500">{actor.handle}</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={actor.toUnfollow}
+                    onChange={e => toggleToUnfollow(e.target.checked, actor.did)}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
       <Toaster position="bottom-center" />
     </>
   );
