@@ -5,7 +5,7 @@
   font-family: Arial, sans-serif;
 }
 
-.title {
+.text-3xl {
   text-align: center;
   font-size: 2rem;
   margin-bottom: 20px;
@@ -17,6 +17,8 @@
   border-radius: 10px;
   margin-bottom: 20px;
   border: 1px solid #ddd;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .form-group {
@@ -26,33 +28,51 @@
 .form-group label {
   display: block;
   margin-bottom: 5px;
+  font-weight: bold;
 }
 
-.controls {
+.actions {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  justify-content: flex-end;
 }
 
 .followings-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 15px;
+  max-width: 600px;
+  margin: 20px auto;
 }
 
 .following-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #f9f9f9;
+  background: #fff;
   padding: 10px;
   border-radius: 5px;
   border: 1px solid #ddd;
-  width: 100%;
 }
 
 .following-item img {
   width: 50px;
   height: 50px;
   border-radius: 50%;
+}
+
+.following-item div {
+  flex: 1;
+}
+
+.following-item h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.following-item p {
+  margin: 0;
+  color: #555;
 }
